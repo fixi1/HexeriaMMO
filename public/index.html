@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="left-panel">
+  <div id="left-panel" style="display:none;">
     <h2>INVENTORY</h2>
     <div id="weapons"></div>
     <div id="armor"></div>
@@ -60,16 +60,18 @@
   </div>
 
   <script>
-    // ... (codul complet cu WebSocket, pixel art rendering, etc.)
-    // Pentru spațiu, aici e versiunea esențială
     let playerId = null;
+    let myX = 100, myY = 100;
     const players = {};
     const socket = new WebSocket(`wss://${window.location.host}`);
 
     function createCharacter() {
+      const name = document.getElementById('char-name').value.trim();
+      if (!name) return alert("Name is required!");
+      
       const data = {
         type: 'createPlayer',
-        name: document.getElementById('char-name').value,
+        name,
         class: document.getElementById('char-class').value,
         hairStyle: document.getElementById('hair-style').value,
         hairColor: document.getElementById('hair-color').value,
@@ -81,17 +83,118 @@
       socket.send(JSON.stringify(data));
     }
 
-    // Restul codului (WebSocket handlers, rendering, etc.) urmează aceeași logică ca în versiunile anterioare
-    // Dar cu canvas pentru pixel art (sau div-uri stilizate)
-
     socket.onmessage = (e) => {
       const msg = JSON.parse(e.data);
       if (msg.type === 'init') {
         playerId = msg.playerId;
-        // Actualizează UI cu datele jucătorului
+        document.getElementById('hp').innerText = msg.player.hp;
+        document.getElementById('maxHp').innerText = msg.player.maxHp;
+        document.getElementById('level').innerText = msg.player.level;
+        document.getElementById('xp').innerText = msg.player.xp;
+        document.getElementById('class').innerText = msg.player.class;
+        createOrUpdatePlayer(playerId, msg.player.x, msg.player.y, true);
+        document.getElementById('left-panel').style.display = 'block';
+        document.getElementById('right-panel').style.display = 'block';
       }
-      // ... alte mesaje
+      else if (msg.type === 'playerJoined') {
+        if (msg.player.id !== playerId) {
+          createOrUpdatePlayer(msg.player.id, msg.player.x, msg.player.y, false);
+        }
+      }
+      else if (msg.type === 'move') {
+        if (msg.id !== playerId) {
+          movePlayer(msg.id, msg.x, msg.y);
+        }
+      }
+      else if (msg.type === 'playerLeft') {
+        removePlayer(msg.id);
+      }
+      else if (msg.type === 'chat') {
+        const div = document.createElement('div');
+        div.className = 'chat-message';
+        div.innerHTML = `<strong>${msg.name}:</strong> ${msg.message}`;
+        document.getElementById('chat-messages').appendChild(div);
+        document.getElementById('chat-messages').scrollTop = 1e9;
+      }
+      else if (msg.type === 'updateStats') {
+        document.getElementById('hp').innerText = msg.hp;
+      }
     };
+
+    function createOrUpdatePlayer(id, x, y, isMe) {
+      if (players[id]) {
+        players[id].div.style.left = x + 'px';
+        players[id].div.style.top = y + 'px';
+        return;
+      }
+      const div = document.createElement('div');
+      div.className = 'player';
+      div.style.backgroundColor = isMe ? '#ff6b6b' : '#4cc9f0';
+      div.textContent = isMe ? 'ME' : 'P';
+      div.style.left = x + 'px';
+      div.style.top = y + 'px';
+      document.getElementById('game-area').appendChild(div);
+      players[id] = { div, x, y };
+    }
+
+    function movePlayer(id, x, y) {
+      if (players[id]) {
+        players[id].div.style.left = x + 'px';
+        players[id].div.style.top = y + 'px';
+      }
+    }
+
+    function removePlayer(id) {
+      if (players[id]) {
+        players[id].div.remove();
+        delete players[id];
+      }
+    }
+
+    function sendChat() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (msg) {
+        socket.send(JSON.stringify({ type: 'chat', message: msg }));
+        input.value = '';
+      }
+    }
+
+    function usePotion() {
+      if (playerId) {
+        socket.send(JSON.stringify({ type: 'usePotion' }));
+      }
+    }
+
+    let keys = {};
+    window.addEventListener('keydown', e => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        keys[e.key] = true;
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', e => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        keys[e.key] = false;
+        e.preventDefault();
+      }
+    });
+
+    setInterval(() => {
+      if (!playerId) return;
+      let moved = false;
+      const s = 5;
+      if (keys['ArrowUp']) { myY -= s; moved = true; }
+      if (keys['ArrowDown']) { myY += s; moved = true; }
+      if (keys['ArrowLeft']) { myX -= s; moved = true; }
+      if (keys['ArrowRight']) { myX += s; moved = true; }
+      myX = Math.max(0, Math.min(768, myX));
+      myY = Math.max(0, Math.min(568, myY));
+      if (moved) {
+        socket.send(JSON.stringify({ type: 'move', x: myX, y: myY }));
+        movePlayer(playerId, myX, myY);
+      }
+    }, 1000/60);
   </script>
 </body>
 </html>
