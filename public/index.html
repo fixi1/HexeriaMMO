@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HexeriaMMO</title>
+  <style>
+    body { margin:0; background:#000; overflow:hidden; }
+    #gameCanvas { display:block; background:#1a2a6c; }
+    #ui { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+    .player-name { position:absolute; color:white; font-size:14px; text-shadow:0 0 3px black; }
+    .effect { position:absolute; pointer-events:none; animation:float 1s forwards; }
+    @keyframes float { to { opacity:0; transform:translateY(-30px); } }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="1280" height="720"></canvas>
+  <div id="ui"></div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const ui = document.getElementById('ui');
+    
+    let playerId = null;
+    let myX = 100, myY = 100;
+    const players = {};
+    const socket = new WebSocket(`wss://${window.location.host}`);
+
+    // Pixel art rendering (simplificat)
+    function drawPlayer(x, y, isMe) {
+      ctx.fillStyle = isMe ? '#ff5722' : '#2196f3';
+      ctx.fillRect(x, y, 32, 32);
+      ctx.fillStyle = 'white';
+      ctx.font = '10px monospace';
+      ctx.fillText(isMe ? 'ME' : 'P', x + 8, y + 20);
+    }
+
+    socket.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'init') {
+        playerId = msg.playerId;
+        // Arată UI-ul de login
+      } else if (msg.type === 'playerJoined') {
+        players[msg.player.id] = msg.player;
+        // Adaugă nume deasupra
+        const nameTag = document.createElement('div');
+        nameTag.className = 'player-name';
+        nameTag.innerText = `${msg.player.name} [${msg.player.level}]`;
+        nameTag.style.left = (msg.player.x) + 'px';
+        nameTag.style.top = (msg.player.y - 20) + 'px';
+        ui.appendChild(nameTag);
+        players[msg.player.id].nameTag = nameTag;
+      } else if (msg.type === 'move') {
+        if (msg.id !== playerId) {
+          players[msg.id].x = msg.x;
+          players[msg.id].y = msg.y;
+          players[msg.id].nameTag.style.left = (msg.x) + 'px';
+          players[msg.id].nameTag.style.top = (msg.y - 20) + 'px';
+        }
+      }
+    };
+
+    // Game loop
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const id in players) {
+        drawPlayer(players[id].x, players[id].y, id === playerId);
+      }
+      requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+
+    // Mișcare
+    let keys = {};
+    window.addEventListener('keydown', e => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        keys[e.key] = true;
+      }
+    });
+    window.addEventListener('keyup', e => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        keys[e.key] = false;
+      }
+    });
+
+    setInterval(() => {
+      if (!playerId) return;
+      let moved = false;
+      const s = 5;
+      if (keys['ArrowUp']) { myY -= s; moved = true; }
+      if (keys['ArrowDown']) { myY += s; moved = true; }
+      if (keys['ArrowLeft']) { myX -= s; moved = true; }
+      if (keys['ArrowRight']) { myX += s; moved = true; }
+      if (moved) {
+        socket.send(JSON.stringify({ type: 'move', x: myX, y: myY }));
+      }
+    }, 1000/60);
+  </script>
+</body>
+</html>
