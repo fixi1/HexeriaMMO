@@ -11,10 +11,6 @@ app.use(express.static('public'));
 app.use(express.json());
 
 const players = {};
-const MAPS = {
-  town: { width: 800, height: 600, safe: true },
-  forest: { width: 1000, height: 800, safe: false }
-};
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
@@ -29,74 +25,44 @@ wss.on('connection', (ws) => {
 
       if (msg.type === 'createPlayer') {
         const id = Math.random().toString(36).substring(2, 10);
-        const playerData = {
-          id,
-          name: msg.name,
-          class: msg.class,
-          x: 100,
-          y: 100,
-          map: 'town',
-          hp: 100,
-          maxHp: 100,
-          xp: 0,
-          level: 1,
-          hairStyle: msg.hairStyle || '1',
-          hairColor: msg.hairColor || '#8B4513',
-          eyeColor: msg.eyeColor || '#000000',
-          skinColor: msg.skinColor || '#F1C27D',
-          shirtColor: msg.shirtColor || '#1E90FF',
-          pantsColor: msg.pantsColor || '#2F4F4F',
-          inventory: JSON.stringify({
-            weapons: [{ name: 'Wooden Sword', damage: 5 }],
-            armor: [{ name: 'Leather Armor', defense: 2 }],
-            potions: [{ name: 'Health Potion', heal: 20 }]
-          }),
-          equipped: JSON.stringify({ weapon: null, armor: null })
-        };
+        const inv = JSON.stringify({
+          weapons: [{ name: 'Wooden Sword', damage: 5 }],
+          armor: [{ name: 'Leather Armor', defense: 2 }],
+          potions: [{ name: 'Health Potion', heal: 20 }]
+        });
+        const eq = JSON.stringify({ weapon: null, armor: null });
 
         db.run(`INSERT INTO players (id, name, class, x, y, map, hp, maxHp, xp, level, hairStyle, hairColor, eyeColor, skinColor, shirtColor, pantsColor, inventory, equipped) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          Object.values(playerData).slice(0, -2).concat([playerData.inventory, playerData.equipped]),
+          [id, msg.name, msg.class, 100, 100, 'town', 100, 100, 0, 1, msg.hairStyle, msg.hairColor, msg.eyeColor, msg.skinColor, msg.shirtColor, msg.pantsColor, inv, eq],
           (err) => {
             if (err) {
               ws.send(JSON.stringify({ type: 'error', message: 'DB error' }));
               return;
             }
 
+            const player = {
+              id, name: msg.name, class: msg.class, x: 100, y: 100, map: 'town',
+              hp: 100, maxHp: 100, xp: 0, level: 1,
+              hairStyle: msg.hairStyle, hairColor: msg.hairColor, eyeColor: msg.eyeColor,
+              skinColor: msg.skinColor, shirtColor: msg.shirtColor, pantsColor: msg.pantsColor,
+              inventory: JSON.parse(inv), equipped: JSON.parse(eq)
+            };
+
             playerId = id;
-            players[id] = { ...playerData, inventory: JSON.parse(playerData.inventory), equipped: JSON.parse(playerData.equipped) };
-            ws.send(JSON.stringify({ type: 'init', playerId, player: players[id] }));
-            broadcast({ type: 'playerJoined', player: players[id] }, ws);
+            players[id] = player;
+            ws.send(JSON.stringify({ type: 'init', playerId, player }));
+            broadcast({ type: 'playerJoined', player }, ws);
           }
         );
       }
 
-      else if (msg.type === 'loadPlayer') {
-        db.get('SELECT * FROM players WHERE id = ?', [msg.id], (err, row) => {
-          if (err || !row) return ws.close();
-          const player = {
-            ...row,
-            inventory: JSON.parse(row.inventory),
-            equipped: JSON.parse(row.equipped)
-          };
-          playerId = msg.id;
-          players[playerId] = player;
-          ws.send(JSON.stringify({ type: 'init', playerId, player }));
-          broadcast({ type: 'playerJoined', player }, ws);
-        });
-      }
-
       else if (msg.type === 'move' && players[playerId]) {
         const p = players[playerId];
-        p.x = Math.max(0, Math.min(MAPS[p.map].width - 32, msg.x));
-        p.y = Math.max(0, Math.min(MAPS[p.map].height - 32, msg.y));
+        p.x = Math.max(0, Math.min(768, msg.x));
+        p.y = Math.max(0, Math.min(568, msg.y));
         db.run('UPDATE players SET x = ?, y = ? WHERE id = ?', [p.x, p.y, playerId]);
-        broadcast({ type: 'move', id: playerId, x: p.x, y: p.y, map: p.map }, ws);
-      }
-
-      else if (msg.type === 'attack' && players[playerId]) {
-        // Simplu: doar notifică
-        broadcast({ type: 'attack', id: playerId, target: msg.target }, ws);
+        broadcast({ type: 'move', id: playerId, x: p.x, y: p.y }, ws);
       }
 
       else if (msg.type === 'usePotion' && players[playerId]) {
@@ -149,5 +115,5 @@ function broadcast(data, exclude = null) {
 
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
