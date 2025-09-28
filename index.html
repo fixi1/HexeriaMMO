@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Free MMO</title>
+  <style>
+    #game { width: 800px; height: 600px; background: #e0f7fa; position: relative; margin: 20px auto; border: 1px solid #999; }
+    .player { position: absolute; width: 30px; height: 30px; background: red; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <h2>MMO on Render — Arrow keys to move</h2>
+  <div id="game"></div>
+
+  <script>
+    const game = document.getElementById('game');
+    const players = {};
+    let myId = null;
+    let myX = 100, myY = 100;
+
+    // 🔥 Conectare la serverul Render (HTTPS + WSS automat)
+    const socket = new WebSocket(`wss://${window.location.host}`);
+
+    socket.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'init') myId = msg.id;
+      else if (msg.type === 'new' && msg.id !== myId) createPlayer(msg.id, msg.x, msg.y);
+      else if (msg.type === 'move' && msg.id !== myId) movePlayer(msg.id, msg.x, msg.y);
+      else if (msg.type === 'remove') removePlayer(msg.id);
+    };
+
+    function createPlayer(id, x, y) {
+      const div = document.createElement('div');
+      div.className = 'player';
+      div.style.left = x + 'px';
+      div.style.top = y + 'px';
+      game.appendChild(div);
+      players[id] = div;
+    }
+
+    function movePlayer(id, x, y) {
+      if (players[id]) {
+        players[id].style.left = x + 'px';
+        players[id].style.top = y + 'px';
+      }
+    }
+
+    function removePlayer(id) {
+      if (players[id]) {
+        players[id].remove();
+        delete players[id];
+      }
+    }
+
+    let keys = {};
+    window.addEventListener('keydown', e => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        keys[e.key] = true;
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', e => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        keys[e.key] = false;
+        e.preventDefault();
+      }
+    });
+
+    setInterval(() => {
+      if (!myId) return;
+      let moved = false;
+      const s = 5;
+      if (keys['ArrowUp']) { myY -= s; moved = true; }
+      if (keys['ArrowDown']) { myY += s; moved = true; }
+      if (keys['ArrowLeft']) { myX -= s; moved = true; }
+      if (keys['ArrowRight']) { myX += s; moved = true; }
+      myX = Math.max(0, Math.min(770, myX));
+      myY = Math.max(0, Math.min(570, myY));
+      if (moved) {
+        socket.send(JSON.stringify({ type: 'move', x: myX, y: myY }));
+        movePlayer(myId, myX, myY);
+      }
+    }, 1000/60);
+  </script>
+</body>
+</html>
