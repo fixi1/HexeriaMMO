@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pixel MMO</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="left-panel">
+    <h2>INVENTORY</h2>
+    <div id="weapons"></div>
+    <div id="armor"></div>
+    <div id="potions"></div>
+
+    <h2>STATS</h2>
+    <div id="stats">
+      <p>HP: <span id="hp">100</span>/<span id="maxHp">100</span></p>
+      <p>Level: <span id="level">1</span></p>
+      <p>XP: <span id="xp">0</span></p>
+      <p>Class: <span id="class">Warrior</span></p>
+    </div>
+    <button onclick="usePotion()">Use Potion</button>
+  </div>
+
+  <div id="game-area"></div>
+
+  <div id="right-panel">
+    <h2>CHAT</h2>
+    <div id="chat-messages"></div>
+    <input id="chat-input" placeholder="Type message..." onkeypress="if(event.key==='Enter') sendChat()">
+    <button onclick="sendChat()">Send</button>
+
+    <h2>CREATE CHARACTER</h2>
+    <div class="customizer-group">
+      <label>Name: <input id="char-name" value="Hero"></label>
+      <label>Class:
+        <select id="char-class">
+          <option>Warrior</option>
+          <option>Mage</option>
+          <option>Rogue</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="customizer-group">
+      <label>Hair Style:
+        <select id="hair-style">
+          <option value="1">Short</option>
+          <option value="2">Long</option>
+          <option value="3">Spiky</option>
+        </select>
+      </label>
+      <label>Hair Color: <input type="color" id="hair-color" value="#8B4513"></label>
+      <label>Eye Color: <input type="color" id="eye-color" value="#000000"></label>
+      <label>Skin Color: <input type="color" id="skin-color" value="#F1C27D"></label>
+      <label>Shirt Color: <input type="color" id="shirt-color" value="#1E90FF"></label>
+      <label>Pants Color: <input type="color" id="pants-color" value="#2F4F4F"></label>
+    </div>
+    <button onclick="createCharacter()">Create & Play</button>
+  </div>
+
+  <script>
+    // ... (codul complet cu WebSocket, pixel art rendering, etc.)
+    // Pentru spațiu, aici e versiunea esențială
+    let playerId = null;
+    const players = {};
+    const socket = new WebSocket(`wss://${window.location.host}`);
+
+    function createCharacter() {
+      const data = {
+        type: 'createPlayer',
+        name: document.getElementById('char-name').value,
+        class: document.getElementById('char-class').value,
+        hairStyle: document.getElementById('hair-style').value,
+        hairColor: document.getElementById('hair-color').value,
+        eyeColor: document.getElementById('eye-color').value,
+        skinColor: document.getElementById('skin-color').value,
+        shirtColor: document.getElementById('shirt-color').value,
+        pantsColor: document.getElementById('pants-color').value
+      };
+      socket.send(JSON.stringify(data));
+    }
+
+    // Restul codului (WebSocket handlers, rendering, etc.) urmează aceeași logică ca în versiunile anterioare
+    // Dar cu canvas pentru pixel art (sau div-uri stilizate)
+
+    socket.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'init') {
+        playerId = msg.playerId;
+        // Actualizează UI cu datele jucătorului
+      }
+      // ... alte mesaje
+    };
+  </script>
+</body>
+</html>

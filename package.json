@@ -1,0 +1,13 @@
+{
+  "name": "mmo-pixel",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.3",
+    "ws": "^8.16.0",
+    "sqlite3": "^5.1.7",
+    "bcryptjs": "^2.4.3"
+  }
+}
