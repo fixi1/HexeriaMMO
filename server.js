@@ -1,17 +1,18 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Serve static files from 'public' folder
-app.use(express.static('public'));
+// Serve static files from root (for index.html, CSS, JS)
+app.use(express.static('.'));
 
-// Serve index.html at root
+// Explicit route for root
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const players = {};
