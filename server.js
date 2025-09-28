@@ -6,7 +6,13 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// Serve static files from 'public' folder
 app.use(express.static('public'));
+
+// Serve index.html at root
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 
 const players = {};
 
