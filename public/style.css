@@ -1,17 +1,17 @@
 :root {
-  --bg-dark: #1a1a2e;
-  --panel-bg: #16213e;
-  --accent: #0f3460;
-  --text: #e6e6e6;
-  --danger: #e94560;
-  --success: #00b74a;
+  --bg-dark: #0f0f1b;
+  --panel-bg: #161a2d;
+  --accent: #2a2e45;
+  --text: #e0e0ff;
+  --primary: #4cc9f0;
+  --danger: #ff6b6b;
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Courier New', monospace;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
@@ -23,111 +23,112 @@ body {
 }
 
 #left-panel, #right-panel {
-  width: 280px;
+  width: 260px;
   background: var(--panel-bg);
-  padding: 15px;
+  padding: 16px;
   overflow-y: auto;
-  border-right: 1px solid #0f3460;
-  border-left: 1px solid #0f3460;
+  border-left: 1px solid #2a2e45;
+  border-right: 1px solid #2a2e45;
 }
 
 #game-area {
   flex: 1;
   position: relative;
-  background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+  background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
   overflow: hidden;
 }
 
-h2, h3 {
-  margin: 10px 0;
+h2 {
+  margin: 12px 0;
   font-size: 18px;
-  color: #4cc9f0;
-  text-shadow: 1px 1px 2px black;
+  color: var(--primary);
+  text-shadow: 0 0 8px rgba(76, 201, 240, 0.5);
 }
 
-/* Pixel Art Character */
 .player {
   position: absolute;
   width: 32px;
   height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px black;
   image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: crisp-edges;
-}
-
-.player-canvas {
-  width: 100%;
-  height: 100%;
 }
 
 .inventory-item {
-  padding: 8px;
-  margin: 5px 0;
-  background: rgba(15, 52, 96, 0.5);
-  border-radius: 4px;
+  padding: 10px;
+  margin: 6px 0;
+  background: var(--accent);
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid transparent;
 }
 
 .inventory-item:hover {
-  background: rgba(76, 201, 240, 0.3);
-  border-color: #4cc9f0;
+  border-color: var(--primary);
+  background: rgba(76, 201, 240, 0.1);
 }
 
 .inventory-item.equipped {
   border-color: gold;
-  background: rgba(255, 215, 0, 0.2);
+  background: rgba(255, 215, 0, 0.15);
 }
 
 .chat-message {
-  padding: 6px;
-  margin: 4px 0;
-  background: rgba(15, 52, 96, 0.6);
-  border-radius: 4px;
+  padding: 8px;
+  margin: 6px 0;
+  background: var(--accent);
+  border-radius: 6px;
   font-size: 14px;
 }
 
 input, select, button {
   width: 100%;
-  padding: 8px;
-  margin: 5px 0;
-  background: var(--accent);
-  border: 1px solid #4cc9f0;
+  padding: 10px;
+  margin: 6px 0;
+  background: #222831;
+  border: 1px solid var(--primary);
   color: white;
-  font-family: 'Courier New', monospace;
+  border-radius: 4px;
 }
 
 button {
-  background: #4cc9f0;
-  color: #16213e;
+  background: var(--primary);
+  color: #0f0f1b;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  border: none;
 }
 
 button:hover {
-  background: #4361ee;
+  background: #3a86ff;
+  transform: translateY(-2px);
 }
 
 #chat-input {
-  background: var(--accent);
+  background: #222831;
   color: white;
 }
 
 #stats {
-  background: rgba(15, 52, 96, 0.6);
-  padding: 10px;
-  border-radius: 4px;
-  margin: 10px 0;
+  background: var(--accent);
+  padding: 12px;
+  border-radius: 6px;
+  margin: 12px 0;
 }
 
 .customizer-group {
-  margin: 10px 0;
+  margin: 12px 0;
 }
 
 .customizer-group label {
   display: block;
-  margin: 5px 0;
+  margin: 6px 0;
   font-size: 14px;
 }
