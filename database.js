@@ -9,19 +9,20 @@ db.serialize(() => {
     class TEXT NOT NULL,
     x REAL DEFAULT 100,
     y REAL DEFAULT 100,
-    map TEXT DEFAULT 'town',
     hp INTEGER DEFAULT 100,
     maxHp INTEGER DEFAULT 100,
+    mana INTEGER DEFAULT 50,
+    maxMana INTEGER DEFAULT 50,
     xp INTEGER DEFAULT 0,
     level INTEGER DEFAULT 1,
-    hairStyle TEXT DEFAULT '1',
-    hairColor TEXT DEFAULT '#8B4513',
-    eyeColor TEXT DEFAULT '#000000',
-    skinColor TEXT DEFAULT '#F1C27D',
-    shirtColor TEXT DEFAULT '#1E90FF',
-    pantsColor TEXT DEFAULT '#2F4F4F',
-    inventory TEXT DEFAULT '{"weapons":[{"name":"Wooden Sword","damage":5}],"armor":[{"name":"Leather Armor","defense":2}],"potions":[{"name":"Health Potion","heal":20}]}',
-    equipped TEXT DEFAULT '{"weapon":null,"armor":null}'
+    gold INTEGER DEFAULT 0,
+    inventory TEXT DEFAULT '{
+      "weapons": [{"id":"sword1","name":"Iron Sword","damage":10,"rarity":"common"}],
+      "armor": [{"id":"armor1","name":"Chainmail","defense":5,"rarity":"common"}],
+      "potions": [{"id":"hp1","name":"Health Potion","heal":30,"rarity":"common"}],
+      "materials": [{"id":"wood","name":"Wood","amount":10}]
+    }',
+    equipped TEXT DEFAULT '{"weapon":"sword1","armor":"armor1"}'
   )`);
 });
 
