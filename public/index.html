@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Pixel MMO</title>
+  <title>Complex MMO</title>
   <meta charset="utf-8">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -11,13 +11,14 @@
     <div id="weapons"></div>
     <div id="armor"></div>
     <div id="potions"></div>
+    <div id="materials"></div>
 
     <h2>STATS</h2>
     <div id="stats">
       <p>HP: <span id="hp">100</span>/<span id="maxHp">100</span></p>
+      <p>Mana: <span id="mana">50</span>/<span id="maxMana">50</span></p>
       <p>Level: <span id="level">1</span></p>
-      <p>XP: <span id="xp">0</span></p>
-      <p>Class: <span id="class">Warrior</span></p>
+      <p>Gold: <span id="gold">0</span></p>
     </div>
     <button onclick="usePotion()">Use Potion</button>
   </div>
@@ -41,21 +42,6 @@
         </select>
       </label>
     </div>
-
-    <div class="customizer-group">
-      <label>Hair Style:
-        <select id="hair-style">
-          <option value="1">Short</option>
-          <option value="2">Long</option>
-          <option value="3">Spiky</option>
-        </select>
-      </label>
-      <label>Hair Color: <input type="color" id="hair-color" value="#8B4513"></label>
-      <label>Eye Color: <input type="color" id="eye-color" value="#000000"></label>
-      <label>Skin Color: <input type="color" id="skin-color" value="#F1C27D"></label>
-      <label>Shirt Color: <input type="color" id="shirt-color" value="#1E90FF"></label>
-      <label>Pants Color: <input type="color" id="pants-color" value="#2F4F4F"></label>
-    </div>
     <button onclick="createCharacter()">Create & Play</button>
   </div>
 
@@ -67,41 +53,47 @@
 
     function createCharacter() {
       const name = document.getElementById('char-name').value.trim();
-      if (!name) return alert("Name is required!");
-      
-      const data = {
+      if (!name) return alert("Name required!");
+      socket.send(JSON.stringify({
         type: 'createPlayer',
         name,
-        class: document.getElementById('char-class').value,
-        hairStyle: document.getElementById('hair-style').value,
-        hairColor: document.getElementById('hair-color').value,
-        eyeColor: document.getElementById('eye-color').value,
-        skinColor: document.getElementById('skin-color').value,
-        shirtColor: document.getElementById('shirt-color').value,
-        pantsColor: document.getElementById('pants-color').value
-      };
-      socket.send(JSON.stringify(data));
+        class: document.getElementById('char-class').value
+      }));
     }
 
     socket.onmessage = (e) => {
       const msg = JSON.parse(e.data);
+      
       if (msg.type === 'init') {
         playerId = msg.playerId;
-        document.getElementById('hp').innerText = msg.player.hp;
-        document.getElementById('maxHp').innerText = msg.player.maxHp;
-        document.getElementById('level').innerText = msg.player.level;
-        document.getElementById('xp').innerText = msg.player.xp;
-        document.getElementById('class').innerText = msg.player.class;
-        createOrUpdatePlayer(playerId, msg.player.x, msg.player.y, true);
-        document.getElementById('left-panel').style.display = 'block';
-        document.getElementById('right-panel').style.display = 'block';
+        updateUI(msg.player);
+        createPlayerElement(playerId, msg.player.x, msg.player.y, msg.player.name, msg.player.level, true);
       }
       else if (msg.type === 'playerJoined') {
         if (msg.player.id !== playerId) {
-          createOrUpdatePlayer(msg.player.id, msg.player.x, msg.player.y, false);
+          createPlayerElement(msg.player.id, msg.player.x, msg.player.y, msg.player.name, msg.player.level, false);
         }
       }
       else if (msg.type === 'move') {
+        if (msg.id !== playerId) movePlayer(msg.id, msg.x, msg.y);
+      }
+      else if (msg.type === 'attack') {
+        showEffect(msg.targetId, `-${msg.damage}`, 'red');
+      }
+      else if (msg.type === 'healEffect') {
+        showEffect(msg.id, `+${msg.amount}`, 'green');
+      }
+      else if (msg.type === 'playerKilled') {
+        removePlayer(msg.victimId);
+        setTimeout(() => {
+          if (msg.victimId !== playerId) {
+            // Re-adaugă jucătorul respawnat (simplificat)
+            const victim = players[msg.victimId];
+            if (victim) createPlayerElement(msg.victimId, 100, 100, victim.name, victim.level, false);
+          }
+        }, 3000);
+      }
+      else if (msg.type === 'respawn') {
         if (msg.id !== playerId) {
           movePlayer(msg.id, msg.x, msg.y);
         }
@@ -110,37 +102,55 @@
         removePlayer(msg.id);
       }
       else if (msg.type === 'chat') {
-        const div = document.createElement('div');
-        div.className = 'chat-message';
-        div.innerHTML = `<strong>${msg.name}:</strong> ${msg.message}`;
-        document.getElementById('chat-messages').appendChild(div);
-        document.getElementById('chat-messages').scrollTop = 1e9;
-      }
-      else if (msg.type === 'updateStats') {
-        document.getElementById('hp').innerText = msg.hp;
+        addChatMessage(msg.name, msg.message);
       }
     };
 
-    function createOrUpdatePlayer(id, x, y, isMe) {
+    function updateUI(player) {
+      document.getElementById('hp').innerText = player.hp;
+      document.getElementById('maxHp').innerText = player.maxHp;
+      document.getElementById('mana').innerText = player.mana;
+      document.getElementById('maxMana').innerText = player.maxMana;
+      document.getElementById('level').innerText = player.level;
+      document.getElementById('gold').innerText = player.gold;
+      document.getElementById('left-panel').style.display = 'block';
+      document.getElementById('right-panel').style.display = 'block';
+    }
+
+    function createPlayerElement(id, x, y, name, level, isMe) {
       if (players[id]) {
         players[id].div.style.left = x + 'px';
         players[id].div.style.top = y + 'px';
         return;
       }
+
       const div = document.createElement('div');
       div.className = 'player';
       div.style.backgroundColor = isMe ? '#ff6b6b' : '#4cc9f0';
-      div.textContent = isMe ? 'ME' : 'P';
       div.style.left = x + 'px';
       div.style.top = y + 'px';
+
+      const nameTag = document.createElement('div');
+      nameTag.className = 'player-name';
+      nameTag.innerText = `${name} [${level}]`;
+      div.appendChild(nameTag);
+
       document.getElementById('game-area').appendChild(div);
-      players[id] = { div, x, y };
+      players[id] = { div, x, y, name, level };
+
+      // Click pentru atac
+      div.addEventListener('click', () => {
+        if (isMe || !playerId) return;
+        socket.send(JSON.stringify({ type: 'attack', targetId: id }));
+      });
     }
 
     function movePlayer(id, x, y) {
       if (players[id]) {
         players[id].div.style.left = x + 'px';
         players[id].div.style.top = y + 'px';
+        players[id].x = x;
+        players[id].y = y;
       }
     }
 
@@ -149,6 +159,26 @@
         players[id].div.remove();
         delete players[id];
       }
+    }
+
+    function showEffect(id, text, color) {
+      if (!players[id]) return;
+      const effect = document.createElement('div');
+      effect.className = 'effect';
+      effect.innerText = text;
+      effect.style.color = color;
+      effect.style.left = (players[id].x + 16) + 'px';
+      effect.style.top = (players[id].y) + 'px';
+      document.getElementById('game-area').appendChild(effect);
+      setTimeout(() => effect.remove(), 1000);
+    }
+
+    function addChatMessage(name, message) {
+      const div = document.createElement('div');
+      div.className = 'chat-message';
+      div.innerHTML = `<strong>${name}:</strong> ${message}`;
+      document.getElementById('chat-messages').appendChild(div);
+      document.getElementById('chat-messages').scrollTop = 1e9;
     }
 
     function sendChat() {
@@ -166,6 +196,7 @@
       }
     }
 
+    // Mișcare
     let keys = {};
     window.addEventListener('keydown', e => {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
